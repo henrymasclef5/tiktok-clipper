@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Clipper - Découpe automatique de vidéos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .status-message {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .clips-container {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .clips-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .clips-header h2 {
+            color: #333;
+        }
+        
+        .download-all-btn {
+            padding: 12px 24px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .download-all-btn:hover {
+            background: #218838;
+        }
+        
+        .clips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .clip-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .clip-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .clip-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .clip-name {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .download-btn {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .download-btn:hover {
+            background: #5568d3;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .tip {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .tip strong {
+            color: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 TikTok Clipper</h1>
+            <p>Découpe automatiquement tes vidéos YouTube en clips pour TikTok</p>
+        </div>
+        
+        <div class="card">
+            <form id="clipperForm">
+                <div class="form-group">
+                    <label for="youtubeUrl">🔗 URL de la vidéo YouTube</label>
+                    <input 
+                        type="text" 
+                        id="youtubeUrl" 
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        required
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="clipDuration">⏱️ Durée de chaque clip (en secondes)</label>
+                    <input 
+                        type="number" 
+                        id="clipDuration" 
+                        value="65" 
+                        min="30" 
+                        max="180"
+                        required
+                    >
+                </div>
+                
+                <button type="submit" class="btn" id="submitBtn">
+                    🚀 Découper la vidéo
+                </button>
+            </form>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+                <div class="status-message" id="statusMessage">En attente...</div>
+            </div>
+            
+            <div class="error" id="errorMessage"></div>
+            
+            <div class="tip">
+                <strong>💡 Astuce :</strong> Pour être monétisable sur TikTok, tes clips doivent durer plus de 60 secondes. C'est pourquoi la durée par défaut est 65 secondes.
+            </div>
+            
+            <div class="tip" style="margin-top: 10px; border-left-color: #9c27b0;">
+                <strong>📱 Format TikTok :</strong> Tous les clips sont automatiquement redimensionnés en 9:16 (1080x1920px) - format vertical parfait pour TikTok !
+            </div>
+        </div>
+        
+        <div class="card clips-container" id="clipsContainer">
+            <div class="clips-header">
+                <h2>📂 Clips créés</h2>
+                <button class="download-all-btn" id="downloadAllBtn">
+                    📥 Télécharger tout (ZIP)
+                </button>
+            </div>
+            <div class="clips-grid" id="clipsGrid"></div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTaskId = null;
+        
+        document.getElementById('clipperForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = document.getElementById('youtubeUrl').value;
+            const duration = document.getElementById('clipDuration').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const errorMessage = document.getElementById('errorMessage');
+            const clipsContainer = document.getElementById('clipsContainer');
+            
+            // Reset
+            errorMessage.style.display = 'none';
+            clipsContainer.style.display = 'none';
+            progressContainer.style.display = 'block';
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Traitement en cours...';
+            
+            try {
+                // Lancer le traitement
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url, duration: parseInt(duration) })
+                });
+                
+                const data = await response.json();
+                currentTaskId = data.task_id;
+                
+                // Vérifier le statut régulièrement
+                checkStatus();
+                
+            } catch (error) {
+                showError('Erreur lors du lancement du traitement');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Découper la vidéo';
+            }
+        });
+        
+        async function checkStatus() {
+            if (!currentTaskId) return;
+            
+            try {
+                const response = await fetch(`/api/status/${currentTaskId}`);
+                const data = await response.json();
+                
+                // Mettre à jour la barre de progression
+                updateProgress(data.progress, data.message);
+                
+                if (data.status === 'completed') {
+                    // Afficher les clips
+                    displayClips(data.clips);
+                    document.getElementById('submitBtn').disabled = false;
+                    document.getElementById('submitBtn').textContent = '🚀 Découper une autre vidéo';
+                } else if (data.status === 'error') {
+                    showError(data.message);
+                    document.getElementById('submitBtn').disabled = false;
+                    document.getElementById('submitBtn').textContent = '🚀 Découper la vidéo';
+                } else {
+                    // Continuer à vérifier
+                    setTimeout(checkStatus, 1000);
+                }
+                
+            } catch (error) {
+                showError('Erreur lors de la récupération du statut');
+            }
+        }
+        
+        function updateProgress(percent, message) {
+            const progressFill = document.getElementById('progressFill');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            progressFill.style.width = percent + '%';
+            progressFill.textContent = percent + '%';
+            statusMessage.textContent = message;
+        }
+        
+        function displayClips(clips) {
+            const clipsContainer = document.getElementById('clipsContainer');
+            const clipsGrid = document.getElementById('clipsGrid');
+            
+            clipsGrid.innerHTML = '';
+            
+            clips.forEach(clipName => {
+                const clipItem = document.createElement('div');
+                clipItem.className = 'clip-item';
+                clipItem.innerHTML = `
+                    <div class="clip-icon">🎥</div>
+                    <div class="clip-name">${clipName}</div>
+                    <button class="download-btn" onclick="downloadClip('${clipName}')">
+                        Télécharger
+                    </button>
+                `;
+                clipsGrid.appendChild(clipItem);
+            });
+            
+            clipsContainer.style.display = 'block';
+        }
+        
+        function downloadClip(filename) {
+            window.location.href = `/api/download/${currentTaskId}/${filename}`;
+        }
+        
+        document.getElementById('downloadAllBtn').addEventListener('click', () => {
+            if (currentTaskId) {
+                window.location.href = `/api/download-all/${currentTaskId}`;
+            }
+        });
+        
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = '❌ ' + message;
+            errorMessage.style.display = 'block';
+            document.getElementById('progressContainer').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
