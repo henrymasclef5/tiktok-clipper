@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TikTok Clipper - Interface Web
+Clipify - Interface Web
 Application Flask pour découper des vidéos YouTube en clips
 """
 
@@ -8,7 +8,7 @@ from flask import Flask, render_template, request, jsonify, send_file, send_from
 import os
 import sys
 from pathlib import Path
-import yt_dlp
+import requests
 from moviepy.editor import VideoFileClip
 import math
 import threading
@@ -46,32 +46,44 @@ class TikTokClipper:
         }
         
     def download_video(self, youtube_url):
-        """Télécharge une vidéo YouTube"""
+        """Télécharge une vidéo YouTube via Cobalt API"""
         self.update_status("downloading", 10, "Téléchargement de la vidéo...")
         
-        ydl_opts = {
-            'format': 'best[height<=1080]',
-            'outtmpl': str(self.output_dir / 'temp_video.%(ext)s'),
-            'quiet': True,
-            'no_warnings': True,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'ios', 'web'],
-                    'skip': ['hls', 'dash']
-                }
-            },
-            'http_headers': {
-                'User-Agent': 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB) gzip',
-                'Accept-Language': 'en-US,en;q=0.9',
-            }
-        }       
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(youtube_url, download=True)
-                video_title = info['title']
-                filename = ydl.prepare_filename(info)
-                self.update_status("downloaded", 30, f"Téléchargé: {video_title}")
-                return filename, video_title
+            # Appel à l'API Cobalt
+            response = requests.post(
+                'https://api.cobalt.tools/api/json',
+                headers={
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                json={
+                    'url': youtube_url,
+                    'vQuality': '1080'
+                },
+                timeout=30
+            )
+            
+            data = response.json()
+            
+            if data.get('status') != 'redirect' and data.get('status') != 'stream':
+                self.update_status("error", 0, f"Erreur API: {data.get('text', 'Inconnue')}")
+                return None, None
+            
+            video_url = data.get('url')
+            
+            # Télécharger la vidéo
+            self.update_status("downloading", 20, "Téléchargement en cours...")
+            video_response = requests.get(video_url, stream=True, timeout=120)
+            video_path = self.output_dir / 'temp_video.mp4'
+            
+            with open(video_path, 'wb') as f:
+                for chunk in video_response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            self.update_status("downloaded", 30, "Vidéo téléchargée avec succès")
+            return str(video_path), "video"
+            
         except Exception as e:
             self.update_status("error", 0, f"Erreur téléchargement: {str(e)}")
             return None, None
@@ -262,7 +274,7 @@ if __name__ == '__main__':
     
     print("""
     ╔════════════════════════════════════╗
-    ║   TikTok Clipper - Web Interface  ║
+    ║      Clipify - Web Interface      ║
     ╚════════════════════════════════════╝
     
     🌐 Ouvre ton navigateur sur : http://localhost:5000
