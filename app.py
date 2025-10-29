@@ -54,6 +54,7 @@ class TikTokClipper:
             'outtmpl': str(self.output_dir / 'temp_video.%(ext)s'),
             'quiet': True,
             'no_warnings': True,
+            'extrador_args': {'youtube': {'player_client': ['android', 'web']}},
         }
         
         try:
