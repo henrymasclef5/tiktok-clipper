@@ -46,31 +46,37 @@ class TikTokClipper:
         }
         
     def download_video(self, youtube_url):
-        """Télécharge une vidéo YouTube via Cobalt API"""
+        """Télécharge une vidéo YouTube via Cobalt API v9"""
         self.update_status("downloading", 10, "Téléchargement de la vidéo...")
         
         try:
-            # Appel à l'API Cobalt
+            # Appel à l'API Cobalt v9
             response = requests.post(
-                'https://api.cobalt.tools/api/json',
+                'https://api.cobalt.tools/',
                 headers={
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
                 json={
                     'url': youtube_url,
-                    'vQuality': '1080'
+                    'videoQuality': '1080'
                 },
                 timeout=30
             )
             
             data = response.json()
             
-            if data.get('status') != 'redirect' and data.get('status') != 'stream':
-                self.update_status("error", 0, f"Erreur API: {data.get('text', 'Inconnue')}")
+            # Vérifier le statut
+            if data.get('status') == 'error':
+                error_msg = data.get('error', {}).get('code', 'Erreur inconnue')
+                self.update_status("error", 0, f"Erreur API: {error_msg}")
                 return None, None
             
+            # Récupérer l'URL de la vidéo
             video_url = data.get('url')
+            if not video_url:
+                self.update_status("error", 0, "Impossible de récupérer la vidéo")
+                return None, None
             
             # Télécharger la vidéo
             self.update_status("downloading", 20, "Téléchargement en cours...")
