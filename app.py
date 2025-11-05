@@ -8,7 +8,7 @@ from flask import Flask, render_template, request, jsonify, send_file, send_from
 import os
 import sys
 from pathlib import Path
-import requests
+import yt_dlp
 from moviepy.editor import VideoFileClip
 import math
 import threading
@@ -46,50 +46,23 @@ class TikTokClipper:
         }
         
     def download_video(self, youtube_url):
-        """Télécharge une vidéo YouTube via Cobalt API v9"""
+        """Télécharge une vidéo YouTube avec yt-dlp"""
         self.update_status("downloading", 10, "Téléchargement de la vidéo...")
         
+        ydl_opts = {
+            'format': 'best[height<=1080]',
+            'outtmpl': str(self.output_dir / 'temp_video.%(ext)s'),
+            'quiet': True,
+            'no_warnings': True,
+        }
+        
         try:
-            # Appel à l'API Cobalt v9
-            response = requests.post(
-                'https://api.cobalt.tools/',
-                headers={
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                json={
-                    'url': youtube_url,
-                    'videoQuality': '1080'
-                },
-                timeout=30
-            )
-            
-            data = response.json()
-            
-            # Vérifier le statut
-            if data.get('status') == 'error':
-                error_msg = data.get('error', {}).get('code', 'Erreur inconnue')
-                self.update_status("error", 0, f"Erreur API: {error_msg}")
-                return None, None
-            
-            # Récupérer l'URL de la vidéo
-            video_url = data.get('url')
-            if not video_url:
-                self.update_status("error", 0, "Impossible de récupérer la vidéo")
-                return None, None
-            
-            # Télécharger la vidéo
-            self.update_status("downloading", 20, "Téléchargement en cours...")
-            video_response = requests.get(video_url, stream=True, timeout=120)
-            video_path = self.output_dir / 'temp_video.mp4'
-            
-            with open(video_path, 'wb') as f:
-                for chunk in video_response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            self.update_status("downloaded", 30, "Vidéo téléchargée avec succès")
-            return str(video_path), "video"
-            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(youtube_url, download=True)
+                video_title = info['title']
+                filename = ydl.prepare_filename(info)
+                self.update_status("downloaded", 30, f"Téléchargé: {video_title}")
+                return filename, video_title
         except Exception as e:
             self.update_status("error", 0, f"Erreur téléchargement: {str(e)}")
             return None, None
